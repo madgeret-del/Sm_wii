@@ -15,6 +15,16 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Fetch source dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf dependencies/all/tinyxml2 dependencies/all/stb_vorbis
+          git clone --depth 1 https://github.com/leethomason/tinyxml2.git dependencies/all/tinyxml2
+          git clone --depth 1 https://github.com/nothings/stb.git dependencies/all/stb_vorbis
+          test -f dependencies/all/tinyxml2/tinyxml2.cpp
+          test -f dependencies/all/stb_vorbis/stb_vorbis.c
+
       - name: Configure Wii build
         shell: bash
         run: |
