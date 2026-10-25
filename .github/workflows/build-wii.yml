@@ -1,0 +1,59 @@
+name: Build Sonic Mania Wii
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitppc:20260503
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Wii build
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITPPC=/opt/devkitpro/devkitPPC
+          export PATH="$DEVKITPPC/bin:/opt/devkitpro/tools/bin:$PATH"
+          cmake -S . -B build \
+            -DCMAKE_TOOLCHAIN_FILE=/opt/devkitpro/cmake/Wii.cmake \
+            -DGAME_STATIC=ON \
+            -DRETRO_REVISION=2 \
+            -DRETRO_DISABLE_PLUS=ON \
+            -DRETRO_MOD_LOADER=OFF \
+            -DRETRO_SUBSYSTEM=GX \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITPPC=/opt/devkitpro/devkitPPC
+          export PATH="$DEVKITPPC/bin:/opt/devkitpro/tools/bin:$PATH"
+          cmake --build build --parallel 2
+
+      - name: Collect DOL
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p artifact
+          find build -type f \( -name '*.dol' -o -name '*.elf' -o -name '*.map' \) -print -exec cp -v {} artifact/ \;
+          test -n "$(find artifact -name '*.dol' -print -quit)"
+          cat > artifact/README.txt <<'TXT'
+          Sonic Mania Wii experimental build.
+          This artifact intentionally does NOT include Data.rsdk.
+          Put your legally obtained Sonic Mania Data.rsdk in /RSDKv5/ on the SD card.
+          TXT
+
+      - name: Upload Wii build
+        uses: actions/upload-artifact@v4
+        with:
+          name: SonicMania-Wii
+          path: artifact/
+          if-no-files-found: error
